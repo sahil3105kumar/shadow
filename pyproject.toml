@@ -1,0 +1,26 @@
+[project]
+name = "shadow"
+version = "0.1.0"
+description = "A local-first cognitive operating system."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.0",
+    "pre-commit>=4.6.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.2",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "rich>=15.0.0",
+    "ruff>=0.15.22",
+    "structlog>=26.1.0",
+    "typer>=0.27.0",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
