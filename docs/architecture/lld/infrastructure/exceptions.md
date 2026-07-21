@@ -52,10 +52,9 @@ Although grouped with Infrastructure documentation, Exceptions ships as an indep
 
 ```text
 shadow/
-└── infrastructure/
-    └── exceptions/
-        ├── __init__.py
-        ├── base.py
+└── exceptions/
+    ├── __init__.py
+    ├── base.py
     ├── kernel.py
     ├── configuration.py
     ├── plugins.py
