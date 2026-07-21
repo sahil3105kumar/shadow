@@ -2,9 +2,9 @@
 
 ## Purpose
 
-The Memory Access component provides the Cognition subsystem with a unified interface for retrieving, updating, and managing information across multiple memory systems.
+The Memory Access component gives the Cognition subsystem a single, convenient interface for requesting relevant information from Shadow's Memory subsystem (`shadow/memory/`) and shaping it into context that Reasoning and Planning can consume.
 
-Rather than storing knowledge itself, it acts as an abstraction layer over different memory providers, enabling cognitive components to access working memory, episodic memory, semantic memory, and long-term knowledge through a consistent API.
+It does **not** store, index, or persist memory itself. All storage — working/short-term memory, episodic memory, semantic memory, long-term memory, and vector search — is owned exclusively by the top-level Memory subsystem. Memory Access is a thin client over that subsystem's public Retrieval API, not a second implementation of it.
 
 The Memory Access component answers one question:
 
@@ -20,59 +20,50 @@ Those responsibilities belong to the Reasoning Engine.
 
 The Memory Access component is responsible for:
 
-- Accessing working memory.
-- Accessing episodic memory.
-- Accessing semantic memory.
-- Retrieving contextual information.
-- Updating memory entries.
-- Expiring temporary memories.
-- Ranking retrieved memories.
-- Managing memory sessions.
-- Providing memory references.
-- Producing standardized memory artifacts.
+- Translating cognitive queries into Memory subsystem retrieval requests.
+- Assembling ranked, budgeted context windows for Reasoning and Planning.
+- Tracking which memory references are active in the current cognitive session.
+- Forwarding "remember this" requests to the Memory subsystem's write API.
+- Producing standardized context artifacts for downstream cognitive components.
 
 The component is **not** responsible for:
 
 - Reasoning
 - Planning
-- Knowledge retrieval
-- Vector search
+- Knowledge retrieval (owned by the Knowledge component)
+- Memory storage, indexing, or persistence
+- Vector search implementation
 - Embedding generation
-- Memory persistence implementation
 - LLM inference
 
 ---
 
 # Scope
 
-Supported memory domains include:
+Memory Access reads from and writes to the following memory domains, all owned by `shadow/memory/`:
 
 ```text
-Working Memory
+Short-Term Memory (shadow/memory/short_term)
 
-Episodic Memory
+Episodic Memory (shadow/memory/episodic)
 
-Semantic Memory
+Semantic Memory (shadow/memory/semantic)
 
-Session Memory
-
-Shared Runtime Memory
+Vector Store (shadow/memory/vector_store)
 ```
+
+It owns none of them. It owns only the session-scoped view Cognition currently has into them.
 
 Future capabilities include:
 
 ```text
-Long-Term Personal Memory
+Adaptive context budgeting
 
-Cross-Agent Shared Memory
+Cross-session memory hints
 
-Hierarchical Memory
+Personalized ranking weights
 
-Persistent World Models
-
-Experience Replay
-
-Adaptive Memory Prioritization
+Predictive pre-fetching of likely-relevant memories
 ```
 
 ---
@@ -82,30 +73,30 @@ Adaptive Memory Prioritization
 ```text
 shadow/
 └── cognition/
-    └── memory/
-        ├── manager.py
-        ├── working.py
-        ├── episodic.py
-        ├── semantic.py
-        ├── ranking.py
+    └── memory_access/
+        ├── __init__.py
+        ├── client.py
+        ├── context_builder.py
+        ├── query_translator.py
+        ├── ranking_hints.py
         ├── session.py
         └── models.py
 ```
 
+Named `memory_access` (not `memory`) to make clear this package does not own memory storage — that remains `shadow/memory/`.
+
 Expected classes:
 
 ```text
-MemoryManager
+MemoryAccessClient
 
-WorkingMemory
+ContextBuilder
 
-EpisodicMemory
+MemoryQueryTranslator
 
-SemanticMemory
+RankingHintProvider
 
-MemoryRanker
-
-SessionManager
+CognitiveSessionContext
 ```
 
 ---
@@ -113,136 +104,71 @@ SessionManager
 # Public API
 
 ```python
-retrieve()
+retrieve_context()
 
 remember()
 
-update()
-
-forget()
-
-search()
-
-rank()
+update_session()
 
 clear_session()
 ```
 
-Every request returns an immutable `MemoryResult`.
+Every request returns an immutable `ContextResult`.
 
 ---
 
 # Internal Components
 
-The Memory Access component consists of six logical components.
+The Memory Access component consists of four logical components.
 
 ---
 
-## Working Memory
+## Memory Query Translator
 
-Stores short-lived information required during active execution.
+Converts a cognitive request (e.g. "what do I know about X for this task") into one or more retrieval requests against the Memory subsystem's public Retrieval Engine (`shadow/memory/retrieval`).
 
-Examples:
-
-- intermediate reasoning results
-- temporary variables
-- execution context
-- active conversation state
-
-Working memory is automatically discarded after task completion unless explicitly promoted.
+Does not query storage directly — always goes through Memory's Retrieval API.
 
 ---
 
-## Episodic Memory
+## Context Builder
 
-Provides access to event-based information.
-
-Examples:
-
-- previous conversations
-- completed tasks
-- execution history
-- user interactions
-
-Episodic memories retain temporal ordering.
-
----
-
-## Semantic Memory
-
-Provides access to structured factual knowledge.
-
-Examples:
-
-- concepts
-- definitions
-- entity relationships
-- learned facts
-
-Semantic memory is independent of individual events.
-
----
-
-## Memory Ranking Engine
-
-Ranks retrieved memories based on relevance.
-
-Ranking considers:
-
-- semantic similarity
-- recency
-- frequency
-- confidence
-- contextual relevance
-
-Ranking is deterministic.
-
----
-
-## Session Manager
-
-Maintains temporary memory associated with an execution session.
+Takes the raw results returned by Memory's Retrieval Engine and assembles them into a ranked, size-budgeted context window suitable for Reasoning or the LLM component.
 
 Responsibilities include:
 
-- session creation
-- session lookup
-- expiration
-- cleanup
+- deduplicating overlapping results
+- truncating to a configured token/size budget
+- attaching provenance (which memory type each item came from)
 
-Session memory never outlives its configured lifetime.
+Ranking itself is performed by Memory's Retrieval Engine; the Context Builder only applies Cognition-specific presentation and budgeting on top of already-ranked results.
 
 ---
 
-## Memory Adapter
+## Ranking Hint Provider
 
-Provides a unified interface to underlying storage providers.
+Supplies Cognition-specific ranking preferences (e.g. "prefer recent episodic memory for this conversational task") as parameters passed into Memory's Retrieval Engine. It does not perform ranking itself.
 
-Possible providers include:
+---
 
-- in-memory cache
-- vector database
-- graph database
-- relational database
+## Cognitive Session Context
 
-The Cognition subsystem remains storage-agnostic.
+Tracks which memory references are currently active for the in-progress cognitive session — a lightweight, session-scoped pointer list, not a memory store. Session-scoped working state that must outlive a single request is written back to Memory's Short-Term Memory via the write API, not held here.
 
 ---
 
 # Class Design
 
 ```text
-MemoryManager
+MemoryAccessClient
 │
-├── WorkingMemory
-├── EpisodicMemory
-├── SemanticMemory
-├── MemoryRanker
-├── SessionManager
-└── MemoryAdapter
+├── MemoryQueryTranslator
+├── ContextBuilder
+├── RankingHintProvider
+└── CognitiveSessionContext
 ```
 
-Only `MemoryManager` is publicly exposed.
+Only `MemoryAccessClient` is publicly exposed.
 
 ---
 
@@ -251,122 +177,91 @@ Only `MemoryManager` is publicly exposed.
 Primary runtime models:
 
 ```text
-MemoryRequest
+ContextRequest
 
-MemoryResult
+ContextResult
+
+ContextItem
 
 MemoryReference
 
-MemoryEntry
-
-MemoryType
-
-MemorySession
-
-MemoryScore
-
-MemoryMetadata
+SessionPointer
 ```
 
-Example MemoryEntry:
+Example ContextItem:
 
 ```text
-Memory ID
+Source Memory Type
 
-Type
+Memory Reference
 
 Content
 
-Confidence
+Relevance Score (as returned by Memory's Retrieval Engine)
 
 Timestamp
 
-Source
-
-Tags
-
-Expiration
-
-Relationships
+Provenance
 ```
 
 ---
 
 # Design Decisions
 
-## Memory is accessed through abstraction
+## Memory Access does not own storage
 
-The Memory Access component exposes a unified interface regardless of the underlying storage technology.
-
-This enables replacing storage implementations without affecting cognitive logic.
+Every write and read is delegated to the Memory subsystem's public API. This is the core boundary that distinguishes Memory Access from Memory: Memory Access has no persistence layer of its own.
 
 ---
 
-## Memory is typed
+## Memory Access is a translation and shaping layer
 
-Every memory belongs to a defined category.
-
-Examples:
-
-- working
-- episodic
-- semantic
-- session
-
-Typed memories simplify retrieval and lifecycle management.
+Its job is API translation (cognitive intent → Memory API calls) and presentation (raw results → budgeted context), not memory management.
 
 ---
 
-## Retrieval is ranked
+## Context is immutable
 
-Multiple memories may match a request.
-
-The ranking engine determines presentation order based on objective scoring criteria.
+A `ContextResult` returned to Reasoning or Planning does not change after being built. A new request produces a new result.
 
 ---
 
-## Memory is immutable
+## Session state is a pointer list, not a store
 
-Retrieved memory entries are immutable.
-
-Updates generate new versions rather than modifying previously retrieved objects.
+`CognitiveSessionContext` tracks references to memories, not the memories themselves. Anything that must persist beyond the current request is written through to Memory's Short-Term Memory.
 
 ---
 
 # Execution Flow
 
-## Memory Retrieval
+## Context Retrieval
 
 ```text
-Memory Request
+Cognitive Query
 
 ↓
 
-Determine Memory Types
+Translate to Memory Retrieval Request(s)
 
 ↓
 
-Query Providers
+Call Memory Subsystem Retrieval API
 
 ↓
 
-Rank Results
+Build Ranked, Budgeted Context
 
 ↓
 
-Build MemoryResult
-
-↓
-
-Return
+Return ContextResult
 ```
 
 ---
 
-## Memory Update
+## Remember Request
 
 ```text
-Update Request
+Remember Request
 
 ↓
 
@@ -374,15 +269,7 @@ Validate Entry
 
 ↓
 
-Select Provider
-
-↓
-
-Persist
-
-↓
-
-Update Index
+Forward to Memory Subsystem Write API
 
 ↓
 
@@ -391,33 +278,27 @@ Return Reference
 
 ---
 
-## Session Cleanup
+## Session Update
 
 ```text
-Expired Session
+Session Event
 
 ↓
 
-Locate Entries
+Update Session Pointer List
 
 ↓
 
-Remove Temporary Memory
-
-↓
-
-Release Resources
+Optionally Write Through to Short-Term Memory
 ```
 
 ---
 
 # State Management
 
-The Memory Access component is stateless.
+The Memory Access component is stateless beyond the current session's pointer list.
 
-Managed memory lifecycles include:
-
-Working Memory:
+Session Context lifecycle:
 
 ```text
 Created
@@ -428,32 +309,14 @@ Active
 
 ↓
 
-Expired
-
-↓
-
-Deleted
-```
-
-Session Memory:
-
-```text
-Created
-
-↓
-
-Attached
-
-↓
-
 Detached
 
 ↓
 
-Removed
+Cleared
 ```
 
-Persistent memories remain under the control of their storage providers.
+All persistent memory lifecycles (working, episodic, semantic, long-term) are managed exclusively by the Memory subsystem, not here.
 
 ---
 
@@ -461,35 +324,31 @@ Persistent memories remain under the control of their storage providers.
 
 Recoverable:
 
-- missing memory
-- expired session
-- partial provider failure
+- Memory subsystem returns no results
+- partial retrieval across memory types
 - low-confidence matches
 
 Fatal:
 
-- corrupted memory index
-- provider unavailable
-- invalid memory schema
-- adapter failure
+- Memory subsystem retrieval API unavailable
+- invalid context request
 
-Failures raise typed memory exceptions.
+Failures raise typed Memory Access exceptions and are distinct from failures raised inside the Memory subsystem itself, which are propagated rather than reinterpreted.
 
 ---
 
 # Concurrency Model
 
-Memory access supports concurrent execution.
+Memory Access supports concurrent context requests.
 
 Rules:
 
-- independent retrievals execute concurrently
-- provider queries execute in parallel
-- ranking executes after retrieval
-- session updates are synchronized
-- immutable entries eliminate read conflicts
+- independent context requests execute concurrently
+- calls into the Memory subsystem's Retrieval API may execute in parallel per query
+- session pointer updates are synchronized
+- context results are immutable once built
 
-Concurrent access must preserve consistency.
+Concurrent access must preserve consistency with the underlying Memory subsystem's own concurrency guarantees.
 
 ---
 
@@ -498,21 +357,15 @@ Concurrent access must preserve consistency.
 Supported configuration includes:
 
 ```text
-Working Memory Size
+Context Size Budget
+
+Default Ranking Hints
 
 Session Timeout
 
-Maximum Retrieved Entries
+Maximum Retrieved Items Per Query
 
-Ranking Strategy
-
-Provider Priority
-
-Cache Policy
-
-Expiration Policy
-
-Memory Versioning
+Provenance Verbosity
 ```
 
 Configuration is loaded during application startup.
@@ -527,13 +380,7 @@ The Memory Access component depends on:
 - Logging
 - Serialization
 - Security
-
-It may communicate with:
-
-- Vector Stores
-- Graph Databases
-- Relational Databases
-- Cache Providers
+- Memory (`shadow/memory/` — specifically its Retrieval Engine, Short-Term Memory, and Consolidation public write APIs)
 
 It does **not** depend on:
 
@@ -542,7 +389,7 @@ It does **not** depend on:
 - Action
 - LLM
 
-Higher-level cognitive components consume memory through this interface.
+It does **not** implement memory storage, indexing, or persistence — see Design Decisions above. Higher-level cognitive components consume memory exclusively through this interface, and this interface consumes the Memory subsystem exclusively through its public API.
 
 ---
 
@@ -550,14 +397,13 @@ Higher-level cognitive components consume memory through this interface.
 
 The Memory Access component must:
 
-- enforce memory access permissions
+- enforce memory access permissions before forwarding requests to Memory
 - isolate user sessions
-- validate memory providers
 - prevent unauthorized retrieval
-- sanitize stored metadata
-- securely expire temporary memories
+- sanitize context before it reaches Reasoning or the LLM component
+- securely expire session pointers
 
-Memory providers should never expose data beyond their authorized scope.
+Memory Access relies on the Memory subsystem's own access controls for data-at-rest protection; it does not duplicate them.
 
 ---
 
@@ -565,13 +411,12 @@ Memory providers should never expose data beyond their authorized scope.
 
 Design goals:
 
-- low-latency retrieval
-- scalable provider abstraction
-- efficient ranking
-- concurrent provider access
-- predictable memory lookup performance
+- low-latency context assembly
+- minimal overhead on top of the Memory subsystem's own retrieval latency
+- efficient budgeting/truncation
+- bounded session pointer list size
 
-Frequently accessed memories should be cached when appropriate.
+Memory Access should add negligible overhead relative to the Memory subsystem's own retrieval cost.
 
 ---
 
@@ -579,42 +424,35 @@ Frequently accessed memories should be cached when appropriate.
 
 ## Unit Tests
 
-- working memory
-- episodic memory
-- semantic memory
-- session management
-- ranking
-- provider abstraction
+- query translation
+- context building and budgeting
+- ranking hint construction
+- session pointer lifecycle
 
 ---
 
 ## Integration Tests
 
-- vector database integration
-- graph database integration
-- cache integration
-- session lifecycle
-- cognition integration
+- Memory subsystem Retrieval Engine integration
+- Memory subsystem write-through (remember requests)
+- cognition orchestration integration
 
 ---
 
 ## Failure Tests
 
-- unavailable provider
-- corrupted memory entry
+- Memory subsystem unavailable
+- empty retrieval results
+- oversized context requests
 - expired sessions
-- ranking failures
-- invalid schemas
 
 ---
 
 ## Performance Tests
 
-- retrieval latency
-- concurrent access
-- cache performance
-- ranking throughput
-- provider scalability
+- context assembly latency
+- concurrent request handling
+- session pointer list growth under load
 
 ---
 
@@ -622,15 +460,9 @@ Frequently accessed memories should be cached when appropriate.
 
 The Memory Access component should support future capabilities including:
 
-- lifelong memory
-- adaptive forgetting
-- memory consolidation
-- hierarchical memory
-- distributed memory providers
-- semantic compression
-- memory summarization
-- experience replay
-- cross-agent shared memory
-- biologically inspired memory models
+- adaptive context budgeting based on downstream component
+- cross-session memory hints
+- personalized ranking weight profiles
+- predictive pre-fetching of likely-relevant memories
 
-These extensions should preserve the existing architecture while maintaining secure, scalable, and storage-independent memory access.
+These extensions should preserve the existing boundary: Memory Access shapes and routes; the Memory subsystem stores and retrieves.

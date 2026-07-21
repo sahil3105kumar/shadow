@@ -98,20 +98,21 @@ shadow/
 └── cognition/
     └── orchestration/
         ├── orchestrator.py
-        ├── scheduler.py
+        ├── plan_step_scheduler.py
         ├── dispatcher.py
         ├── lifecycle.py
         ├── monitoring.py
         ├── recovery.py
         └── models.py
 ```
+Named `plan_step_scheduler.py` rather than `scheduler.py` to avoid confusion with the Kernel's system-wide `Scheduler` (`kernel/scheduler.md`) and Action's `StepScheduler` (`action/workflows.md`). `PlanStepScheduler` only orders steps within a single Cognition request; it does not own timers, retries-over-time, or system jobs — those are submitted to the Kernel Scheduler.
 
 Expected classes:
 
 ```text
 Orchestrator
 
-Scheduler
+PlanStepScheduler
 
 Dispatcher
 
@@ -152,9 +153,9 @@ The Orchestration Engine consists of six logical components.
 
 ---
 
-## Scheduler
+## Plan Step Scheduler
 
-Responsible for determining execution order.
+Responsible for determining execution order of steps within a single request.
 
 Scheduling considers:
 
@@ -164,23 +165,24 @@ Scheduling considers:
 - execution policies
 - parallelism
 
-The scheduler never changes task semantics.
+The scheduler never changes task semantics, and does not manage system-wide jobs or timers — that remains the Kernel Scheduler's responsibility.
 
 ---
 
 ## Dispatcher
 
-Routes work to appropriate subsystems.
+Routes work to appropriate Cognition subsystems.
 
 Possible destinations include:
 
 - Planner
 - Reasoning
 - Retrieval
-- Memory
+- Memory Access
 - Knowledge
 - LLM
-- Action
+
+Action is never a Dispatcher destination — execution requests leave Cognition only as events on the Event Bus, published after the Orchestrator has finished coordinating the above.
 
 Dispatching is transparent to callers.
 
@@ -259,7 +261,7 @@ ExecutionResult
 ```text
 Orchestrator
 │
-├── Scheduler
+├── PlanStepScheduler
 ├── Dispatcher
 ├── LifecycleManager
 ├── ExecutionMonitor
@@ -388,7 +390,7 @@ Generate Execution Plan
 
 ↓
 
-Invoke Action (Optional)
+Publish Execution Request Event (Optional — consumed by Action)
 
 ↓
 
@@ -557,9 +559,14 @@ The Orchestrator depends on:
 - Retrieval
 - Knowledge
 - LLM
+
+It does **not** depend on:
+
 - Action
 
-It communicates exclusively through public subsystem interfaces.
+Once the Orchestrator has produced a decision, it publishes an execution request event on the Event Bus rather than calling Action directly. Action independently subscribes to and executes these events. This preserves the "Cognition decides, Action executes" boundary and avoids a Cognition–Action import cycle (Action already depends on nothing in Cognition; see `action/README.md`).
+
+It communicates with the other Cognition components through public subsystem interfaces, and with Action exclusively through the Event Bus.
 
 The Orchestrator serves as the integration point for the entire Shadow architecture.
 

@@ -53,13 +53,15 @@ Direct use of Python's logging module outside this subsystem is prohibited.
 ```text
 shadow/
 └── infrastructure/
-    ├── logging.py
-    ├── formatter.py
-    ├── handlers.py
-    ├── filters.py
-    ├── context.py
-    └── factory.py
+    └── logging/
+        ├── __init__.py
+        ├── formatter.py
+        ├── handlers.py
+        ├── filters.py
+        ├── context.py
+        └── factory.py
 ```
+Nested under its own subpackage — not flat inside `shadow/infrastructure/` — for the same reason as Filesystem, Security, and Serialization: flat siblings would collide across components.
 
 Expected classes:
 

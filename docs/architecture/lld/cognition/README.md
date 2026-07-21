@@ -95,7 +95,7 @@ shadow/
 └── cognition/
     ├── planner/
     ├── reasoning/
-    ├── memory/
+    ├── memory_access/
     ├── retrieval/
     ├── knowledge/
     ├── llm/
@@ -103,6 +103,7 @@ shadow/
     ├── context/
     └── models/
 ```
+Named `memory_access/`, not `memory/` — Cognition consumes memory through this thin client; it does not store memory itself. Storage is owned by the top-level `shadow/memory/` subsystem.
 
 ---
 

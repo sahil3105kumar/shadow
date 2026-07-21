@@ -55,14 +55,16 @@ No component should implement independent permission or secret management.
 ```text
 shadow/
 └── infrastructure/
-    ├── security.py
-    ├── permissions.py
-    ├── policies.py
-    ├── secrets.py
-    ├── crypto.py
-    ├── validator.py
-    └── audit.py
+    └── security/
+        ├── __init__.py
+        ├── permissions.py
+        ├── policies.py
+        ├── secrets.py
+        ├── crypto.py
+        ├── validator.py
+        └── audit.py
 ```
+Nested under its own subpackage — not flat inside `shadow/infrastructure/` — since `validator.py` would otherwise collide with Filesystem's own `validator.py`.
 
 Expected classes:
 

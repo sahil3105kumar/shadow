@@ -48,10 +48,14 @@ Direct use of generic exceptions (e.g., `Exception`, `RuntimeError`, `ValueError
 
 # Package Structure
 
+Although grouped with Infrastructure documentation, Exceptions ships as an independent top-level package — like Configuration — since it must be importable before Kernel, Infrastructure, or any other subsystem initializes. It does not live inside `shadow/infrastructure/`, `shadow/kernel/`, or `shadow/config/`, all of which depend on it.
+
 ```text
 shadow/
 └── infrastructure/
-    ├── exceptions.py
+    └── exceptions/
+        ├── __init__.py
+        ├── base.py
     ├── kernel.py
     ├── configuration.py
     ├── plugins.py
@@ -61,6 +65,7 @@ shadow/
     ├── security.py
     └── validation.py
 ```
+`base.py` defines `ShadowError` and the shared metadata/category/context models. Each remaining file defines the domain-specific subclasses for the domain named in the filename (e.g. `kernel.py` → `KernelError`); the domain name here refers to which subsystem raises the error, not where the file lives.
 
 Expected classes:
 

@@ -60,13 +60,15 @@ All serialization should pass through this subsystem.
 ```text
 shadow/
 └── infrastructure/
-    ├── serialization.py
-    ├── serializers.py
-    ├── deserializers.py
-    ├── registry.py
-    ├── schemas.py
-    └── validators.py
+    └── serialization/
+        ├── __init__.py
+        ├── serializers.py
+        ├── deserializers.py
+        ├── registry.py
+        ├── schemas.py
+        └── validators.py
 ```
+Nested under its own subpackage — not flat inside `shadow/infrastructure/` — for the same reason as Filesystem, Logging, and Security.
 
 Expected classes:
 

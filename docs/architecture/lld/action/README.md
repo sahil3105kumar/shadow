@@ -576,7 +576,6 @@ The Action subsystem depends on:
 - Configuration
 - Logging
 - Security
-- Cognition
 
 It communicates with:
 
@@ -589,6 +588,9 @@ It communicates with:
 It does **not** depend on:
 
 - Perception
+- Cognition
+
+Action never imports or calls Cognition directly. It receives execution requests exclusively as events published on the Event Bus (typically originating from Cognition's Orchestrator), and publishes execution results back the same way. This keeps the dependency one-directional and event-mediated rather than a direct package dependency, which would otherwise create a Cognition–Action import cycle.
 
 Perception produces information.
 

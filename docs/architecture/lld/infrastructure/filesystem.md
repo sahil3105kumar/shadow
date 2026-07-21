@@ -55,13 +55,15 @@ Direct usage of Python's filesystem libraries (`os`, `pathlib`, `shutil`, etc.) 
 ```text
 shadow/
 └── infrastructure/
-    ├── filesystem.py
-    ├── manager.py
-    ├── paths.py
-    ├── operations.py
-    ├── temporary.py
-    └── validator.py
+    └── filesystem/
+        ├── __init__.py
+        ├── manager.py
+        ├── paths.py
+        ├── operations.py
+        ├── temporary.py
+        └── validator.py
 ```
+Nested under its own subpackage — not flat inside `shadow/infrastructure/` — since sibling components (Logging, Security, Serialization) independently define their own `manager.py`/`validator.py`-style files, which would otherwise collide.
 
 Expected classes:
 
