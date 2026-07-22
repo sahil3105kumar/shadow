@@ -74,10 +74,16 @@ You do not re-read the whole `lld/` tree per issue. You open the one or two file
 
 # Where we are right now
 
-- **Milestone 1 — "Phase 0: Foundation"** is the active milestone. 12 issues, in dependency order: Configuration → Logging → Dependency Injection → Event Bus → Plugin Framework → Kernel Bootstrap & Lifecycle → Testing Infrastructure → CI Pipeline → Docker Dev Environment → CLI → Exception Framework → Phase 0 Integration & Validation.
-- Only Kernel and Infrastructure HLD/LLD are relevant right now. Perception, Cognition, Action, and Memory HLD/LLD exist already (Phases 2–4+) but are not needed until their milestone opens — don't pre-read them.
-- `docs/adr/ADR-0001-*.md` documents the domain-separation conflicts found and fixed in the LLD before any code was written, and why.
+- **Milestone 1 — "Phase 0: Foundation"** is the active milestone. 12 issues, in dependency order: **Configuration ✅ done** → **Logging ← we are here, starting now** → Dependency Injection → Event Bus → Plugin Framework → Kernel Bootstrap & Lifecycle → Testing Infrastructure → CI Pipeline → Docker Dev Environment → CLI → Exception Framework → Phase 0 Integration & Validation.
 
+- **Issue 1 (Configuration System)** is implemented: `shadow/config/` (`__init__`, `errors`, `models`, `defaults`, `providers`, `loader`, `validators`, `settings`) + `tests/unit/config/`, 28 tests passing, `ruff`/`mypy` clean. `shadow/config/errors.py` holds local exception stubs pending re-parenting under the real Exception Framework once Issue 11 lands.
+- Only Kernel and Infrastructure HLD/LLD are relevant right now. Perception, Cognition, Action, and Memory HLD/LLD exist already (Phases 2–4+) but are not needed until their milestone opens — don't pre-read them.
+
+- `docs/adr/ADR-0001-*.md` documents the domain-separation conflicts found and fixed in the LLD before any code was written, and why.
+- `docs/adr/ADR-0002-*.md` documents the Configuration System's implementation decisions, plus an addendum on local dev tooling: the `mypy` pre-commit hook now runs via `uv run mypy` (a local hook, not the isolated `mirrors-mypy` env) so it always sees whatever `uv sync` installs, and `pyproject.toml` gained a `[tool.mypy]` section with the `pydantic.mypy` plugin enabled. Worth knowing if a future issue's pre-commit run behaves unexpectedly around typing.
+
+
+**Issue 2 (Structured logging) -> up next
 ---
 
 # If you get lost again
