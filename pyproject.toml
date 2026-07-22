@@ -3,6 +3,7 @@ name = "shadow"
 version = "0.1.0"
 description = "A local-first cognitive operating system."
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.13.4",
@@ -33,6 +34,10 @@ pythonpath = ["."]
 plugins = ["pydantic.mypy"]
 python_version = "3.12"
 strict = true
+warn_unreachable = true
+warn_no_return = true
+show_error_codes = true
+pretty = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

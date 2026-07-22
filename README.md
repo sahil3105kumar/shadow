@@ -336,6 +336,4 @@ The immediate objective is to build a stable Kernel and event-driven runtime cap
 
 # License
 
-This project is under active development.
-
-The license will be determined before the first public release.
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
