@@ -32,6 +32,14 @@ def default_config() -> dict[str, Any]:
         "logging": {
             "level": "INFO",
             "format": "json",
+            "console_enabled": True,
+            "file_enabled": False,
+            "log_dir": "logs",
+            "log_filename": "shadow.log",
+            "max_bytes": 10_485_760,
+            "backup_count": 5,
+            "timestamp_format": "%Y-%m-%dT%H:%M:%S%z",
+            "mask_sensitive_fields": True,
         },
         "plugins": {
             "enabled": True,
