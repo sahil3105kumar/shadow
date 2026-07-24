@@ -83,7 +83,9 @@ You do not re-read the whole `lld/` tree per issue. You open the one or two file
 - `docs/adr/ADR-0002-*.md` documents the Configuration System's implementation decisions, plus an addendum on local dev tooling: the `mypy` pre-commit hook now runs via `uv run mypy` (a local hook, not the isolated `mirrors-mypy` env) so it always sees whatever `uv sync` installs, and `pyproject.toml` gained a `[tool.mypy]` section with the `pydantic.mypy` plugin enabled. Worth knowing if a future issue's pre-commit run behaves unexpectedly around typing.
 
 
-**Issue 2 (Structured logging) -> up next
+**Issue 2 (Structured logging)** -> done
+**Issue 3(DI container)** -> working
+
 ---
 
 # If you get lost again
