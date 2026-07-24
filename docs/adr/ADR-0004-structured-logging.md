@@ -1,4 +1,4 @@
-# ADR-0001: Structured Logging Built on the Standard Library
+# ADR-0004: Structured Logging Built on the Standard Library
 
 **Status:** Accepted
 **Date:** 2026-07-23
