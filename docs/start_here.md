@@ -74,16 +74,20 @@ You do not re-read the whole `lld/` tree per issue. You open the one or two file
 
 # Where we are right now
 
-- **Milestone 1 — "Phase 0: Foundation"** is the active milestone. 12 issues, in dependency order: **Configuration ✅ done** → **Logging ← we are here, starting now** → Dependency Injection → Event Bus → Plugin Framework → Kernel Bootstrap & Lifecycle → Testing Infrastructure → CI Pipeline → Docker Dev Environment → CLI → Exception Framework → Phase 0 Integration & Validation.
+-- **Milestone 1 — "Phase 0: Foundation"** is the active milestone. 12 issues, in dependency order: **Configuration ✅ done** → **Logging ✅ done** → **Dependency Injection ✅ done** → **Event Bus ← we are here, starting now** → Plugin Framework → Kernel Bootstrap & Lifecycle → Testing Infrastructure → CI Pipeline → Docker Dev Environment → CLI → Exception Framework → Phase 0 Integration & Validation.
 
 - **Issue 1 (Configuration System)** is implemented: `shadow/config/` (`__init__`, `errors`, `models`, `defaults`, `providers`, `loader`, `validators`, `settings`) + `tests/unit/config/`, 28 tests passing, `ruff`/`mypy` clean. `shadow/config/errors.py` holds local exception stubs pending re-parenting under the real Exception Framework once Issue 11 lands.
+- **Issue 2 (Structured Logging)** is implemented: `shadow/infrastructure/logging/` (`__init__`, `errors`, `context`, `filters`, `formatter`, `handlers`, `factory`) + `tests/unit/infrastructure/logging/`, 57 tests passing. `LoggingSettings` in `shadow/config/models.py`/`defaults.py` extended with console/file/rotation/masking fields. `shadow/infrastructure/logging/errors.py` holds local exception stubs, same pending-re-parent note as Issue 1. Built on stdlib `logging` rather than the `structlog` dev dependency — see ADR-0004.
+- **Issue 3 (Dependency Injection Container)** is implemented: `shadow/kernel/container.py` + `shadow/kernel/errors.py` + `tests/unit/kernel/`, 36 tests passing. No automatic constructor injection yet (factories pull dependencies explicitly via `ResolutionContext`) — see ADR-0005.
+
+
 - Only Kernel and Infrastructure HLD/LLD are relevant right now. Perception, Cognition, Action, and Memory HLD/LLD exist already (Phases 2–4+) but are not needed until their milestone opens — don't pre-read them.
 
 - `docs/adr/ADR-0001-*.md` documents the domain-separation conflicts found and fixed in the LLD before any code was written, and why.
 - `docs/adr/ADR-0002-*.md` documents the Configuration System's implementation decisions, plus an addendum on local dev tooling: the `mypy` pre-commit hook now runs via `uv run mypy` (a local hook, not the isolated `mirrors-mypy` env) so it always sees whatever `uv sync` installs, and `pyproject.toml` gained a `[tool.mypy]` section with the `pydantic.mypy` plugin enabled. Worth knowing if a future issue's pre-commit run behaves unexpectedly around typing.
+- `docs/adr/ADR-0004-*.md` documents why the Logging System is built on stdlib `logging` instead of the `structlog` dev dependency.
+- `docs/adr/ADR-0005-*.md` documents why the DI Container requires explicit dependency declaration/resolution instead of automatic constructor injection.
 
-
-**Issue 2 (Structured logging) -> up next
 ---
 
 # If you get lost again
