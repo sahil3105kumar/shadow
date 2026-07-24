@@ -56,7 +56,13 @@ class KernelSettings(BaseModel):
 
 
 class LoggingSettings(BaseModel):
-    """Structured logging settings."""
+    """Structured logging settings.
+
+    Extended for Phase 0 Issue 2 (Structured Logging) per
+    `docs/architecture/lld/infrastructure/logging.md`'s Configuration
+    section; `level` and `format` predate that issue and keep their
+    original defaults.
+    """
 
     model_config = {"frozen": True}
 
@@ -64,6 +70,37 @@ class LoggingSettings(BaseModel):
     format: LogFormat = Field(
         default=LogFormat.JSON,
         description="Log output format (json for machine-readable, console for humans).",
+    )
+    console_enabled: bool = Field(
+        default=True, description="Whether logs are written to the console (stderr)."
+    )
+    file_enabled: bool = Field(
+        default=False, description="Whether logs are also written to a rotating log file."
+    )
+    log_dir: str = Field(
+        default="logs",
+        description="Directory log files are written to, relative to the app root.",
+    )
+    log_filename: str = Field(
+        default="shadow.log", description="Filename used for the primary log file."
+    )
+    max_bytes: int = Field(
+        default=10_485_760,
+        gt=0,
+        description="Maximum size in bytes of a log file before it is rotated.",
+    )
+    backup_count: int = Field(
+        default=5,
+        ge=0,
+        description="Number of rotated log files retained before the oldest is deleted.",
+    )
+    timestamp_format: str = Field(
+        default="%Y-%m-%dT%H:%M:%S%z",
+        description="strftime format used for the timestamp attached to every log record.",
+    )
+    mask_sensitive_fields: bool = Field(
+        default=True,
+        description="Whether metadata fields that look like secrets are redacted before emission.",
     )
 
 
